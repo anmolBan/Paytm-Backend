@@ -4,15 +4,16 @@ const jwt = require('jsonwebtoken');
 const { Account, User } = require('../db');
 const { authMiddleware } = require('../middlewares/userMiddlewares');
 const { JWT_SECRET } = require('../config');
+const mongoose = require('mongoose');
 
 const accountRouter = express.Router();
 
 accountRouter.get("/balance", authMiddleware, async (req, res) => {
-    const userId = req.query.userId;
+    // const userId = req.query.userId;
 
     try{
         const account = await Account.findOne({
-            userId: userId
+            userId: req.userId
         });
 
         if(account){
@@ -22,7 +23,7 @@ accountRouter.get("/balance", authMiddleware, async (req, res) => {
         }
         return res.status(400).json({
             message: `No account found`
-        })
+        });
     } catch(error){
         console.log(error);
         res.status(500).json({
@@ -46,56 +47,48 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
         });
     }
 
+    const session = await mongoose.startSession();
+
     try{
-        const user = await User.findOne({
-            username: req.username
-        });
+        session.startTransaction();
+        const {to, amount} = req.body;
 
-        const account1 = await Account.findOne({
-            userId: user._id
-        });
+        const fromAccount = await Account.findOne({
+            userId: req.userId
+        }).session(session);
 
-        if(!account1){
+        if(!fromAccount || amount > fromAccount.balance){
+            await session.abortTransaction();
             return res.status(400).json({
-                message: "Invalid account1"
+                message: "Insufficient balance"
             });
         }
 
-        if(payload.amount > account1.balance){
+
+        const toAccount = await Account.findOne({
+            userId: to
+        }).session(session);
+
+        if(!toAccount){
+            await session.abortTransaction();
             return res.status(400).json({
-                message: "Isufficient balance"
+                message: "Invalid Account"
             });
         }
 
-        await Account.findOneAndUpdate({
-            userId: user._id
-        }, {
-            $inc: {balance: -payload.amount}
-        });
-
-        const account2 = await Account.findOneAndUpdate({
-            userId: payload.to
-        }, {
-            $inc: {balance: payload.amount}
-        });
-
-        if(!account2){
-            return req.status(400).json({
-                message: "Invalid Account2"
-            });
-        }
-
+        await Account.updateOne({userId: req.userId}, {$inc : {balance: -amount}}).session(session);
+        await Account.updateOne({userId: to}, {$inc: {balance: amount}}).session(session);
+        
+        await session.commitTransaction();
         res.status(200).json({
             message: "Transfer successful"
         });
-
     } catch(error){
-        console.log(error);
+        console.error(error);
         res.status(500).json({
-            message: error.message
+            message: error
         });
     }
-
 });
 
 

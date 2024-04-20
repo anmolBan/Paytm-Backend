@@ -50,7 +50,7 @@ userRouter.post("/signin", signinValidation, async (req, res) => {
             return;
         }
         const token = jwt.sign({
-            username: username
+            userId: user._id
         }, JWT_SECRET);
         res.status(200).json({
             token: token
