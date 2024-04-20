@@ -10,8 +10,14 @@ userRouter.post("/signup", signupValidation, verifyAtomicity, async (req, res) =
     const balance = Math.floor(Math.random() * 10000) + 1;
 
     try{
-        const user = await User.create(body);
-        const account = await Account.create({
+        const user = await User(body);
+
+        let hashedPassword = await user.createHash(req.body.password);
+        user.password_hash = hashedPassword;
+
+        await user.save();
+
+        await Account.create({
             userId: user._id,
             balance: balance
         });
@@ -40,18 +46,24 @@ userRouter.post("/signin", signinValidation, async (req, res) => {
     try{
         const user = await User.findOne({
             username: username,
-            password: password
         });
     
         if(!user){
-            res.status(411).json({
+            return res.status(411).json({
                 message: "Error while logging in"
             });
-            return;
         }
+        
+        if(! await user.validatePassword(password)){
+            return res.status(411).json({
+                message: "Error while logging in"
+            });
+        }
+
         const token = jwt.sign({
             userId: user._id
         }, JWT_SECRET);
+
         res.status(200).json({
             token: token
         });
