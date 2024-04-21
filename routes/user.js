@@ -105,6 +105,32 @@ userRouter.post("/update", updateInputValidation, authMiddleware, async (req, re
     }
 });
 
+userRouter.get("/info", authMiddleware, async (req, res) => {
+    const userId = req.userId;
+
+    try{
+        let user = await User.findOne({
+            _id: userId
+        }, 'firstName lastName');
+
+        // console.log(userId);
+        if(!user){
+            return res.status(400).json({
+                message: "You are not logged in"
+            });
+        }
+
+        return res.status(200).json({
+            user
+        });
+    } catch(error){
+        console.log(error);
+        res.status(500).json({
+            message: error.message
+        });
+    }
+})
+
 userRouter.get("/bulk", async (req, res) => {
     const filter = (req.query.filter || "").toLowerCase();
 
