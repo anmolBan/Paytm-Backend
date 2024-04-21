@@ -23,12 +23,14 @@ const UserSchema = new mongoose.Schema({
         type: String,
         require: true,
         trim: true,
+        lowercase: true,
         maxLength: 50
     },
     lastName: {
         type: String,
         required: true,
         trim: true,
+        lowercase: true,
         maxLength: 50
     }
 });

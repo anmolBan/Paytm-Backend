@@ -106,7 +106,7 @@ userRouter.post("/update", updateInputValidation, authMiddleware, async (req, re
 });
 
 userRouter.get("/bulk", async (req, res) => {
-    const filter = req.query.filter || "";
+    const filter = (req.query.filter || "").toLowerCase();
 
     try{
 
@@ -123,7 +123,7 @@ userRouter.get("/bulk", async (req, res) => {
         });
     
         res.json({
-            user: users.map(user => ({
+            users: users.map(user => ({
                 username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,

@@ -1,11 +1,8 @@
 const express = require('express');
 const zod = require('zod');
-const jwt = require('jsonwebtoken');
 const { Account, User } = require('../db');
 const { authMiddleware } = require('../middlewares/userMiddlewares');
-const { JWT_SECRET } = require('../config');
 const mongoose = require('mongoose');
-
 const accountRouter = express.Router();
 
 accountRouter.get("/balance", authMiddleware, async (req, res) => {
@@ -46,10 +43,21 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
             message: "Invalid inputs"
         });
     }
-
-    const session = await mongoose.startSession();
-
+    
     try{
+        // To check whether the recipient user exists or not, doing this to prevent transaction due to data inconsistency
+        const user = await User.findOne({
+            _id: payload.to
+        });
+
+        if(!user){
+            return res.status(400).json({
+                message: "No user found with the given id" // if not, then return
+            });
+        }
+
+        const session = await mongoose.startSession();
+
         session.startTransaction();
         const {to, amount} = req.body;
 
@@ -63,7 +71,6 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
                 message: "Insufficient balance"
             });
         }
-
 
         const toAccount = await Account.findOne({
             userId: to
