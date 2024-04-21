@@ -4,12 +4,13 @@ const {JWT_SECRET} = require('../config');
 const { signupValidation, verifyAtomicity, signinValidation, authMiddleware, updateInputValidation } = require('../middlewares/userMiddlewares');
 const { User, Account } = require('../db');
 const userRouter = express.Router();
+const zod = require('zod');
 
 userRouter.post("/signup", signupValidation, verifyAtomicity, async (req, res) => {
     const body = req.body;
-    const balance = Math.floor(Math.random() * 10000) + 1;
-
+    
     try{
+        const balance = Math.floor(Math.random() * 10000) + 1;
         const user = await User(body);
 
         let hashedPassword = await user.createHash(req.body.password);
@@ -76,9 +77,9 @@ userRouter.post("/signin", signinValidation, async (req, res) => {
 });
 
 userRouter.post("/update", updateInputValidation, authMiddleware, async (req, res) => {
-    const token = req.headers.authorization.split(" ")[1];
-
+    
     try{
+        const token = req.headers.authorization.split(" ")[1];
         const decoded = jwt.verify(token, JWT_SECRET);
 
         const username = decoded.username;
@@ -113,7 +114,6 @@ userRouter.get("/info", authMiddleware, async (req, res) => {
             _id: userId
         }, 'firstName lastName');
 
-        // console.log(userId);
         if(!user){
             return res.status(400).json({
                 message: "You are not logged in"
@@ -129,12 +129,19 @@ userRouter.get("/info", authMiddleware, async (req, res) => {
             message: error.message
         });
     }
-})
+});
 
-userRouter.get("/bulk", async (req, res) => {
-    const filter = (req.query.filter || "").toLowerCase();
+const filterSchema = zod.string();
 
+userRouter.get("/bulk", authMiddleware, async (req, res) => {
     try{
+        const filter = (req.query.filter || "").toLowerCase();
+        const parsedFilter = filterSchema.safeParse(filter);
+        if(!parsedFilter.success){
+            return res.status(400).json({
+                message: "Invalid filter query"
+            });
+        }
 
         const users = await User.find({
             $or: [{
@@ -145,8 +152,9 @@ userRouter.get("/bulk", async (req, res) => {
                 lastName: {
                     "$regex": filter
                 }
-            }]
-        });
+            }],
+            _id: {$ne: req.userId}
+        })
     
         res.json({
             users: users.map(user => ({

@@ -59,11 +59,22 @@ function signinValidation(req, res, next){
     });
 }
 
+const tokenSchema = zod.string();
+
 function authMiddleware(req, res, next){
     let unfilteredToken = req.headers.authorization;
 
+    const parsedUnfilteredToken = tokenSchema.safeParse(unfilteredToken);
+    if(!parsedUnfilteredToken.success){
+        return res.status(403).json({
+            message: "Invalid Token"
+        });
+    }
+
     if(!unfilteredToken || !unfilteredToken.startsWith("Bearer ")){
-        return res.status(403).json({});
+        return res.status(403).json({
+            message: "Invalid Token"
+        });
     }
     unfilteredToken = unfilteredToken.split(" ");
     const filteredToken = unfilteredToken[1];

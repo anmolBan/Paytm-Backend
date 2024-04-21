@@ -6,7 +6,6 @@ const mongoose = require('mongoose');
 const accountRouter = express.Router();
 
 accountRouter.get("/balance", authMiddleware, async (req, res) => {
-    // const userId = req.query.userId;
 
     try{
         const account = await Account.findOne({
@@ -35,16 +34,16 @@ const transferInputValidation = zod.object({
 });
 
 accountRouter.post("/transfer", authMiddleware, async (req, res) => {
-    const payload = req.body;
-    const parsedPayload = transferInputValidation.safeParse(payload);
-
-    if(!parsedPayload.success){
-        return res.status(400).json({
-            message: "Invalid inputs"
-        });
-    }
     
     try{
+        const payload = req.body;
+        const parsedPayload = transferInputValidation.safeParse(payload);
+    
+        if(!parsedPayload.success){
+            return res.status(400).json({
+                message: "Invalid inputs"
+            });
+        }
         // To check whether the recipient user exists or not, doing this to prevent transaction due to data inconsistency
         const user = await User.findOne({
             _id: payload.to
