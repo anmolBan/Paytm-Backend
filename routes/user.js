@@ -51,13 +51,13 @@ userRouter.post("/signin", signinValidation, async (req, res) => {
     
         if(!user){
             return res.status(411).json({
-                message: "Error while logging in"
+                message: "User not found"
             });
         }
         
         if(! await user.validatePassword(password)){
             return res.status(411).json({
-                message: "Error while logging in"
+                message: "Password is wrong"
             });
         }
 
